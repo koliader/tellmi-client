@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { api } from "@/src/share/api";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,14 +13,22 @@ import { IAuthRes, ILoginReq } from "@/src/share/api/model/users";
 import { AxiosError } from "axios";
 import { IQueryError } from "@/src/share/api/model/api";
 import { toast } from "@/components/ui/toast";
+import { useForm } from "react-hook-form";
 
 const usersApi = new UsersApiService();
 
 export const LoginPage = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    mode: "onSubmit",
+  });
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const { isSuccess, isError, error, mutate, isPending } = useMutation<
+  const { mutate, isPending } = useMutation<
     IAuthRes,
     AxiosError<IQueryError>,
     ILoginReq
