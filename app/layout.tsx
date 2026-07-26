@@ -3,8 +3,10 @@ import "./globals.css";
 import { Navbar } from "@/src/widgets/Navbar";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { Providers } from "@/src/widgets/Providers/ui";
+import { Toaster } from "@/components/ui/toast";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -17,11 +19,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", "antialiased", "font-sans", inter.variable)}>
-      <body className="min-h-full flex flex-col">
-        <Navbar />
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={cn("h-full", "antialiased", "font-sans", inter.variable)}
+    >
+      <Providers>
+        <body className="min-h-full flex flex-col">
+          <Toaster />
+          <Navbar />
+          {children}
+        </body>
+      </Providers>
     </html>
   );
 }

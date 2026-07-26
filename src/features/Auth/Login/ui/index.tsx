@@ -8,49 +8,62 @@ import { tokenStorage } from "@/src/share/api/tokenStorage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useMutation } from "@tanstack/react-query";
+import { UsersApiService } from "@/src/share/api/UsersApiService";
+import { IAuthRes, ILoginReq } from "@/src/share/api/model/users";
+import { AxiosError } from "axios";
+import { IQueryError } from "@/src/share/api/model/api";
+import { toast } from "@/components/ui/toast";
+
+const usersApi = new UsersApiService();
 
 export const LoginPage = () => {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const { data } = await api.post("/auth/login", { username, password });
+  const { isSuccess, isError, error, mutate, isPending } = useMutation<
+    IAuthRes,
+    AxiosError<IQueryError>,
+    ILoginReq
+  >({
+    mutationKey: ["login"],
+    mutationFn: usersApi.login.bind(usersApi),
+    onSuccess(data) {
+      console.log(data);
+      toast.add({
+        title: "Authentication",
+        description: "User authenticated!",
+      });
       tokenStorage.setTokens(data.accessToken, data.refreshToken);
-      router.push("/");
-      router.refresh();
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error || "Login failed";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
+      // router.refresh();
+    },
+    onError(err) {
+      toast.add({
+        title: "Authentication",
+        description: `Err to authenticate user ${(err as AxiosError<IQueryError>)?.response?.data.error || "Login failed"}`,
+      });
+    },
+  });
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
-          <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Welcome back
+          </h1>
           <p className="text-sm text-muted-foreground">
             Sign in to your Tellmi account
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mutate({ username, password });
+          }}
+          className="space-y-4"
+        >
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             <Input
@@ -59,7 +72,7 @@ export const LoginPage = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
-              disabled={loading}
+              disabled={isPending}
             />
           </div>
 
@@ -72,12 +85,12 @@ export const LoginPage = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              disabled={loading}
+              disabled={isPending}
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? (
+          <Button type="submit" className="w-full" disabled={isPending}>
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
                 Signing in...
@@ -90,7 +103,10 @@ export const LoginPage = () => {
 
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
-          <a href="/auth/register" className="text-foreground underline underline-offset-4 hover:text-primary">
+          <a
+            href="/auth/register"
+            className="text-foreground underline underline-offset-4 hover:text-primary"
+          >
             Register
           </a>
         </p>
