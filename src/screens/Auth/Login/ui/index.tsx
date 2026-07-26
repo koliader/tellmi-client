@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { AxiosError } from "axios";
 import { IQueryError } from "@/src/share/api/model/api";
 import { toast } from "@/components/ui/toast";
 import { useForm } from "react-hook-form";
+import { IAuthFormValues } from "../types";
 
 const usersApi = new UsersApiService();
 
@@ -21,13 +22,21 @@ export const LoginPage = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm({
-    mode: "onSubmit",
+    formState: { errors, isValid },
+  } = useForm<IAuthFormValues>({
+    mode: "all",
+    defaultValues: {
+      username: "",
+      password: "",
+    },
   });
   const router = useRouter();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+
+  useEffect(() => {
+    if (tokenStorage.getPayload()) {
+      router.replace("/");
+    }
+  }, [router]);
   const { mutate, isPending } = useMutation<
     IAuthRes,
     AxiosError<IQueryError>,
@@ -36,13 +45,12 @@ export const LoginPage = () => {
     mutationKey: ["login"],
     mutationFn: usersApi.login.bind(usersApi),
     onSuccess(data) {
-      console.log(data);
+      tokenStorage.setTokens(data.accessToken, data.refreshToken);
       toast.add({
         title: "Authentication",
         description: "User authenticated!",
       });
-      tokenStorage.setTokens(data.accessToken, data.refreshToken);
-      // router.refresh();
+      window.location.reload();
     },
     onError(err) {
       toast.add({
@@ -65,10 +73,7 @@ export const LoginPage = () => {
         </div>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            mutate({ username, password });
-          }}
+          onSubmit={handleSubmit((values) => mutate(values))}
           className="space-y-4"
         >
           <div className="space-y-2">
@@ -76,11 +81,16 @@ export const LoginPage = () => {
             <Input
               id="username"
               placeholder="Enter your username"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
               disabled={isPending}
+              {...register("username", {
+                required: "Username is required!",
+              })}
             />
+            {errors?.username && (
+              <div className="text-sm text-destructive">
+                {errors.username.message}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -89,14 +99,27 @@ export const LoginPage = () => {
               id="password"
               type="password"
               placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
               disabled={isPending}
+              {...register("password", {
+                required: "Password is required!",
+                minLength: {
+                  value: 5,
+                  message: "Password must be at least 5 characters",
+                },
+              })}
             />
+            {errors?.password && (
+              <div className="text-sm text-destructive">
+                {errors.password.message}
+              </div>
+            )}
           </div>
 
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isPending || !isValid}
+          >
             {isPending ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" />
