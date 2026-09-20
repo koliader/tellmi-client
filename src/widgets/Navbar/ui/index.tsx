@@ -1,5 +1,15 @@
 "use client";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LogOut, MessageSquare } from "lucide-react";
@@ -24,6 +34,7 @@ import { toast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Navbar = () => {
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [payload, setPayload] = useState<IPayload | null>(null);
   useEffect(() => {
     setPayload(tokenStorage.getPayload());
@@ -51,6 +62,7 @@ export const Navbar = () => {
   }, [error, isFetched]);
 
   const handleLogout = () => {
+    setIsOpen(false);
     tokenStorage.clearTokens();
     setPayload(null);
     window.location.href = "/";
@@ -122,8 +134,9 @@ export const Navbar = () => {
                       {payload.role}
                     </p>
                   </div>
+
                   <DropdownMenuItem
-                    onClick={handleLogout}
+                    onClick={() => setIsOpen(true)}
                     variant="destructive"
                     className="cursor-pointer"
                   >
@@ -132,6 +145,27 @@ export const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              <AlertDialog open={isOpen}>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your account from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setIsOpen(false)}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>
+                      Continue
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </>
           ) : (
             <>
