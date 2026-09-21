@@ -20,7 +20,11 @@ interface AuthFormProps {
   submitLabel: string;
   loadingLabel: string;
   alternateLink: { label: string; href: string; linkText: string };
-  mutation: UseMutationResult<IAuthRes, AxiosError<IQueryError>, IAuthFormValues>;
+  mutation: UseMutationResult<
+    IAuthRes,
+    AxiosError<IQueryError>,
+    IAuthFormValues
+  >;
 }
 
 export const AuthForm: FC<AuthFormProps> = ({
@@ -107,7 +111,7 @@ export const AuthForm: FC<AuthFormProps> = ({
 
           <Button
             type="submit"
-            className="w-full"
+            className="w-full cursor-pointer"
             disabled={mutation.isPending || (mounted && !isValid)}
           >
             {mutation.isPending ? (

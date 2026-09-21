@@ -1,15 +1,5 @@
 "use client";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { LogOut, MessageSquare } from "lucide-react";
@@ -32,13 +22,18 @@ import { UsersApiService } from "@/src/share/api/UsersApiService";
 import { IUserRes } from "@/src/share/api/model/users";
 import { toast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { NavAlertDialog } from "./NavAlertDialog";
+import { alertDialogStore } from "../model/store";
 
 export const Navbar = () => {
-  const [isOpen, setIsOpen] = useState<boolean>(false);
+  // token
   const [payload, setPayload] = useState<IPayload | null>(null);
   useEffect(() => {
     setPayload(tokenStorage.getPayload());
   }, []);
+
+  // store
+  const store = alertDialogStore();
 
   // getting user data by token
   const api = new UsersApiService();
@@ -60,13 +55,6 @@ export const Navbar = () => {
     }
     if (isFetched) console.log(data);
   }, [error, isFetched]);
-
-  const handleLogout = () => {
-    setIsOpen(false);
-    tokenStorage.clearTokens();
-    setPayload(null);
-    window.location.href = "/";
-  };
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
@@ -136,7 +124,7 @@ export const Navbar = () => {
                   </div>
 
                   <DropdownMenuItem
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => store.setIsOpen(true)}
                     variant="destructive"
                     className="cursor-pointer"
                   >
@@ -145,27 +133,7 @@ export const Navbar = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <AlertDialog open={isOpen}>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>
-                      Are you absolutely sure?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone. This will permanently delete
-                      your account from our servers.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel onClick={() => setIsOpen(false)}>
-                      Cancel
-                    </AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLogout}>
-                      Continue
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <NavAlertDialog />
             </>
           ) : (
             <>
