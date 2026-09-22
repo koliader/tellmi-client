@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Navbar } from "@/src/widgets/Navbar";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/src/widgets/Providers/ui";
@@ -26,7 +25,6 @@ export default function RootLayout({
       <Providers>
         <body className="min-h-full flex flex-col">
           <Toaster />
-          <Navbar />
           {children}
         </body>
       </Providers>

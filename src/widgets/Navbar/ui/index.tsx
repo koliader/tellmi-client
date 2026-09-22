@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, MessageSquare } from "lucide-react";
+import { LogOut, MessageSquare, Plus } from "lucide-react";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
 import type { IPayload } from "@/src/share/types/token";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NavAlertDialog } from "./NavAlertDialog";
 import { alertDialogStore } from "../model/store";
+import { usePathname } from "next/navigation";
 
 export const Navbar = () => {
   // token
@@ -31,6 +32,9 @@ export const Navbar = () => {
   useEffect(() => {
     setPayload(tokenStorage.getPayload());
   }, []);
+
+  // pathname
+  const pathname = usePathname();
 
   // store
   const store = alertDialogStore();
@@ -66,11 +70,14 @@ export const Navbar = () => {
           <span className="text-lg font-semibold tracking-tight">Tellmi</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           {payload ? (
             <>
               <Button
-                variant="ghost"
+                className="duration-200"
+                variant={
+                  pathname.slice(0, 6) == "/posts" ? "secondary" : "ghost"
+                }
                 size="sm"
                 nativeButton={false}
                 render={<Link href="/posts" />}
@@ -87,7 +94,15 @@ export const Navbar = () => {
               </Button>
 
               <Separator orientation="vertical" className="mx-1 h-6" />
-
+              <Link href="/posts/create">
+                <Button
+                  className="flex justify-center items-center cursor-pointer text-xs font-bold"
+                  size="sm"
+                >
+                  <Plus />
+                  New post
+                </Button>
+              </Link>
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={<Button variant="ghost" className="gap-2 px-2" />}
@@ -97,11 +112,11 @@ export const Navbar = () => {
                     variant={
                       payload.role === "ADMIN" ? "destructive" : "secondary"
                     }
-                    className="text-[10px] px-1.5 py-0"
+                    className="text-[10px] px-2.5 py-0"
                   >
                     {payload.role}
                   </Badge>
-                  <Avatar className="size-8 ">
+                  <Avatar className="size-8">
                     {isLoading && !error ? (
                       <Skeleton className="h-8 w-8 rounded-full" />
                     ) : (

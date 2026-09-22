@@ -59,7 +59,7 @@ export const AuthForm: FC<AuthFormProps> = ({
   }, [router]);
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center px-4">
+    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
