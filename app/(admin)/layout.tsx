@@ -1,5 +1,5 @@
 import { AdminGate } from "@/src/widgets/AdminGate";
-import { AdminNavbar } from "@/src/widgets/AdminNavbar";
+import { AdminSidebar } from "@/src/widgets/AdminSidebar";
 
 export default function AdminLayout({
   children,
@@ -8,10 +8,12 @@ export default function AdminLayout({
 }>) {
   return (
     <AdminGate>
-      <AdminNavbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-        {children}
-      </main>
+      <div className="flex h-screen overflow-hidden">
+        <AdminSidebar />
+        <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 sm:px-6 lg:px-8">
+          {children}
+        </main>
+      </div>
     </AdminGate>
   );
 }

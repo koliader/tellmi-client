@@ -2,7 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { LogOut, MessageSquare, Plus } from "lucide-react";
+import {
+  LogOut,
+  MessageSquare,
+  MessageSquareText,
+  Plus,
+  ShieldCheck,
+} from "lucide-react";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
 import type { IPayload } from "@/src/share/types/token";
 import { Button } from "@/components/ui/button";
@@ -13,6 +19,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useQuery } from "@tanstack/react-query";
@@ -65,7 +72,7 @@ export const Navbar = () => {
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-            <MessageSquare className="size-4 text-primary-foreground" />
+            <MessageSquareText className="size-4 text-primary-foreground" />
           </div>
           <span className="text-lg font-semibold tracking-tight">Tellmi</span>
         </Link>
@@ -137,6 +144,19 @@ export const Navbar = () => {
                       {payload.role}
                     </p>
                   </div>
+
+                  {payload.role === "ADMIN" && (
+                    <>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        render={<Link href="/admin" />}
+                      >
+                        <ShieldCheck className="mr-2 size-4" />
+                        Admin panel
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
 
                   <DropdownMenuItem
                     onClick={() => store.setIsOpen(true)}
