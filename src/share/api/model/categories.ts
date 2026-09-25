@@ -5,3 +5,7 @@ export interface ICategory {
 export interface ICreateCategoryReq {
   name: string;
 }
+export interface IEditCategoryReq {
+  id: number;
+  name: string;
+}

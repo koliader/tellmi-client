@@ -1,5 +1,9 @@
 import { api } from ".";
-import { ICategory, ICreateCategoryReq } from "./model/categories";
+import {
+  ICategory,
+  ICreateCategoryReq,
+  IEditCategoryReq,
+} from "./model/categories";
 
 export class CategoriesApiService {
   async list(): Promise<ICategory[]> {
@@ -8,5 +12,13 @@ export class CategoriesApiService {
 
   async create(req: ICreateCategoryReq): Promise<ICategory> {
     return api.post<ICategory>("/categories", req).then((res) => res.data);
+  }
+
+  async edit(req: IEditCategoryReq): Promise<void> {
+    return api.put("/categories", req).then((res) => res.data);
+  }
+
+  async delete(id: number): Promise<void> {
+    return api.delete(`/categories/${id}`).then((res) => res.data);
   }
 }
