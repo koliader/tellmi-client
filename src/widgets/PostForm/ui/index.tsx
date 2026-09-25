@@ -60,7 +60,11 @@ export const PostForm: FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const createPost = useMutation<IPost, AxiosError<IQueryError>, IPostFormValues>({
+  const createPost = useMutation<
+    IPost,
+    AxiosError<IQueryError>,
+    IPostFormValues
+  >({
     mutationFn: (values) =>
       postsApi.create({
         title: values.title,
@@ -70,6 +74,7 @@ export const PostForm: FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       toast.add({
+        type: "success",
         title: "Post created",
         description: "Your post has been published!",
       });
@@ -77,6 +82,7 @@ export const PostForm: FC = () => {
     },
     onError: (err) => {
       toast.add({
+        type: "success",
         title: "Create post",
         description: err?.response?.data?.error ?? "Failed to create post",
       });
@@ -128,13 +134,24 @@ export const PostForm: FC = () => {
                     aria-invalid={errors.categoryId ? true : undefined}
                     disabled={isCategoriesPending}
                   >
-                    <SelectValue
-                      placeholder={
-                        isCategoriesPending
-                          ? "Loading categories..."
-                          : "Select a category"
-                      }
-                    />
+                    <SelectValue>
+                      {(value) => {
+                        if (!value) {
+                          return (
+                            <span className="text-muted-foreground">
+                              {isCategoriesPending
+                                ? "Loading categories..."
+                                : "Select a category"}
+                            </span>
+                          );
+                        }
+                        return (
+                          categories?.find(
+                            (category) => String(category.id) === value,
+                          )?.name ?? value
+                        );
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
@@ -146,12 +163,11 @@ export const PostForm: FC = () => {
                           {category.name}
                         </SelectItem>
                       ))}
-                      {!isCategoriesPending &&
-                        categories?.length === 0 && (
-                          <SelectItem value="__empty" disabled>
-                            No categories available
-                          </SelectItem>
-                        )}
+                      {!isCategoriesPending && categories?.length === 0 && (
+                        <SelectItem value="__empty" disabled>
+                          No categories available
+                        </SelectItem>
+                      )}
                     </SelectGroup>
                   </SelectContent>
                 </Select>
