@@ -64,8 +64,7 @@ export const Navbar = () => {
         description: "Error on getting user profile data!",
       });
     }
-    if (isFetched) console.log(data);
-  }, [error, isFetched]);
+  }, [error]);
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">

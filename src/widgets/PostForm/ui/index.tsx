@@ -1,6 +1,6 @@
 "use client";
 import { Controller, useForm } from "react-hook-form";
-import { FC } from "react";
+import { FC, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -59,7 +59,11 @@ export const PostForm: FC = () => {
     queryFn: () => categoriesApi.list(),
     staleTime: 5 * 60 * 1000,
   });
-
+  useEffect(() => {
+    if (!isCategoriesPending) {
+      console.log(`categories: ${categories}`);
+    }
+  }, [categories]);
   const createPost = useMutation<
     IPost,
     AxiosError<IQueryError>,
@@ -119,7 +123,16 @@ export const PostForm: FC = () => {
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label className="pl-0.5">Category</Label>
+            <Label className="pl-0.5">
+              Category
+              {!isCategoriesPending &&
+                !isCategoriesError &&
+                categories === null && (
+                  <span className="ml-1 text-xs text-muted-foreground">
+                    (categories are empty)
+                  </span>
+                )}
+            </Label>
             <Controller
               control={control}
               name="categoryId"
@@ -132,7 +145,7 @@ export const PostForm: FC = () => {
                   <SelectTrigger
                     className="w-full"
                     aria-invalid={errors.categoryId ? true : undefined}
-                    disabled={isCategoriesPending}
+                    disabled={isCategoriesPending || categories === null}
                   >
                     <SelectValue>
                       {(value) => {
@@ -141,7 +154,9 @@ export const PostForm: FC = () => {
                             <span className="text-muted-foreground">
                               {isCategoriesPending
                                 ? "Loading categories..."
-                                : "Select a category"}
+                                : categories?.length === 0
+                                  ? "No categories available"
+                                  : "Select a category"}
                             </span>
                           );
                         }
