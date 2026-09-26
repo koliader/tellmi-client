@@ -7,10 +7,9 @@ import { DataTable, dataTableFeatures } from "@/src/share/ui/DataTable";
 import { CategoriesApiService } from "@/src/share/api/CategoriesApiService";
 import { IQueryError } from "@/src/share/api/model/api";
 import { ICategory } from "@/src/share/api/model/categories";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { useEffect } from "react";
-import { categoryCreationStore } from "@/src/screens/Admin/Categories/model/store";
 import { CategoryActionsCell } from "./CategoryActionsCell";
 import { CategoryNameCell } from "./CategoryNameCell";
 
@@ -32,8 +31,6 @@ const EMPTY_CATEGORIES: ICategory[] = [];
 
 export const AdminCategories = () => {
   const api = new CategoriesApiService();
-  const queryClient = useQueryClient();
-  const store = categoryCreationStore();
 
   const { data, error } = useQuery<
     ICategory[],
@@ -52,13 +49,6 @@ export const AdminCategories = () => {
       });
     }
   }, [error]);
-
-  useEffect(() => {
-    if (store.isReload) {
-      queryClient.invalidateQueries({ queryKey: ["categories"] });
-      store.setIsReload(false);
-    }
-  }, [store.isReload, store.setIsReload, queryClient]);
 
   const categories = data ?? EMPTY_CATEGORIES;
 

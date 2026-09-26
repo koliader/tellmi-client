@@ -6,14 +6,13 @@ import {
   ICategory,
   ICreateCategoryReq,
 } from "@/src/share/api/model/categories";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AxiosError } from "axios";
 import { IQueryError } from "@/src/share/api/model/api";
 import { toast } from "@/components/ui/toast";
-import { categoryCreationStore } from "@/src/screens/Admin/Categories/model/store";
 
 export const CreateCategoryForm: FC = () => {
-  const store = categoryCreationStore();
+  const queryClient = useQueryClient();
   const [name, setName] = useState<string>("");
 
   const api = new CategoriesApiService();
@@ -43,7 +42,7 @@ export const CreateCategoryForm: FC = () => {
         type: "success",
       });
       setName("");
-      store.setIsReload(true);
+      queryClient.invalidateQueries({ queryKey: ["categories"] });
     }
   }, [isPending, isSuccess, error]);
   return (

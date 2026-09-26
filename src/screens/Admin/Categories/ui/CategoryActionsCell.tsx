@@ -18,21 +18,18 @@ import {
 import { toast } from "@/components/ui/toast";
 import { CategoriesApiService } from "@/src/share/api/CategoriesApiService";
 import { IQueryError } from "@/src/share/api/model/api";
-import {
-  ICategory,
-  IEditCategoryReq,
-} from "@/src/share/api/model/categories";
+import { ICategory, IEditCategoryReq } from "@/src/share/api/model/categories";
 import { categoryEditStore } from "@/src/screens/Admin/Categories/model/editStore";
 
 interface CategoryActionsCellProps {
   category: ICategory;
 }
 
-/** Row actions: edit (pencil -> check/cross) and delete (bin + confirmation). */
 export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
   const api = new CategoriesApiService();
   const queryClient = useQueryClient();
-  const { editingId, draftName, startEditing, stopEditing } = categoryEditStore();
+  const { editingId, draftName, startEditing, stopEditing } =
+    categoryEditStore();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const isEditing = editingId === category.id;
   const canAccept = draftName.trim() !== "";
@@ -73,7 +70,8 @@ export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
         type: "error",
         title: "Category edit error",
         description:
-          editMutation.error.response?.data?.error ?? "Failed to update category",
+          editMutation.error.response?.data?.error ??
+          "Failed to update category",
       });
     }
   }, [editMutation.error]);
@@ -84,7 +82,8 @@ export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
         type: "error",
         title: "Category delete error",
         description:
-          deleteMutation.error.response?.data?.error ?? "Failed to delete category",
+          deleteMutation.error.response?.data?.error ??
+          "Failed to delete category",
       });
     }
   }, [deleteMutation.error]);
@@ -141,10 +140,7 @@ export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
         </Button>
       </div>
 
-      <AlertDialog
-        open={isDeleteOpen}
-        onOpenChange={setIsDeleteOpen}
-      >
+      <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete category?</AlertDialogTitle>
