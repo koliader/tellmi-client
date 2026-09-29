@@ -19,6 +19,7 @@ import { toast } from "@/components/ui/toast";
 import { CategoriesApiService } from "@/src/share/api/CategoriesApiService";
 import { IQueryError } from "@/src/share/api/model/api";
 import { ICategory, IEditCategoryReq } from "@/src/share/api/model/categories";
+import { HEX_COLOR_REGEX } from "@/src/share/ui/ColorPicker";
 import { categoryEditStore } from "@/src/screens/Admin/Categories/model/editStore";
 
 interface CategoryActionsCellProps {
@@ -28,11 +29,12 @@ interface CategoryActionsCellProps {
 export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
   const api = new CategoriesApiService();
   const queryClient = useQueryClient();
-  const { editingId, draftName, startEditing, stopEditing } =
+  const { editingId, draftName, draftColor, startEditing, stopEditing } =
     categoryEditStore();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const isEditing = editingId === category.id;
-  const canAccept = draftName.trim() !== "";
+  const canAccept =
+    draftName.trim() !== "" && HEX_COLOR_REGEX.test(draftColor);
 
   const editMutation = useMutation<
     void,
@@ -96,7 +98,11 @@ export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
           size="icon-sm"
           disabled={!canAccept || editMutation.isPending}
           onClick={() =>
-            editMutation.mutate({ id: category.id, name: draftName })
+            editMutation.mutate({
+              id: category.id,
+              name: draftName,
+              color: draftColor,
+            })
           }
           className="cursor-pointer"
           aria-label="Accept changes"
@@ -123,7 +129,9 @@ export const CategoryActionsCell = ({ category }: CategoryActionsCellProps) => {
         <Button
           variant="ghost"
           size="icon-sm"
-          onClick={() => startEditing(category.id, category.name)}
+          onClick={() =>
+            startEditing(category.id, category.name, category.color)
+          }
           className="cursor-pointer"
           aria-label={`Edit ${category.name}`}
         >

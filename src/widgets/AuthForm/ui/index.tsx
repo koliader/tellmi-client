@@ -20,6 +20,8 @@ interface AuthFormProps {
   submitLabel: string;
   loadingLabel: string;
   alternateLink: { label: string; href: string; linkText: string };
+  /** Registration only: renders the optional email field. */
+  showEmail?: boolean;
   mutation: UseMutationResult<
     IAuthRes,
     AxiosError<IQueryError>,
@@ -33,6 +35,7 @@ export const AuthForm: FC<AuthFormProps> = ({
   submitLabel,
   loadingLabel,
   alternateLink,
+  showEmail = false,
   mutation,
 }) => {
   const {
@@ -44,6 +47,7 @@ export const AuthForm: FC<AuthFormProps> = ({
     defaultValues: {
       username: "",
       password: "",
+      email: "",
     },
   });
   const router = useRouter();
@@ -108,6 +112,34 @@ export const AuthForm: FC<AuthFormProps> = ({
               </div>
             )}
           </div>
+
+          {showEmail ? (
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                Email
+                <span className="ml-1 text-xs text-muted-foreground">
+                  (optional)
+                </span>
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                disabled={mutation.isPending}
+                {...register("email", {
+                  pattern: {
+                    value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                    message: "Enter a valid email address",
+                  },
+                })}
+              />
+              {errors?.email && (
+                <div className="text-sm text-destructive">
+                  {errors.email.message}
+                </div>
+              )}
+            </div>
+          ) : null}
 
           <Button
             type="submit"

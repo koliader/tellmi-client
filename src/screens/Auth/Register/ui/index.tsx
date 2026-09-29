@@ -15,7 +15,13 @@ export const RegisterPage = () => {
   const mutation = useMutation<IAuthRes, AxiosError<IQueryError>, IRegisterReq>(
     {
       mutationKey: ["register"],
-      mutationFn: usersApi.register.bind(usersApi),
+      // The form also carries username and password, plus the optional email.
+      mutationFn: (values) =>
+        usersApi.register({
+          username: values.username,
+          password: values.password,
+          ...(values.email ? { email: values.email } : {}),
+        }),
       onSuccess(data) {
         tokenStorage.setTokens(data.accessToken, data.refreshToken);
         toast.add({
@@ -46,6 +52,7 @@ export const RegisterPage = () => {
         href: "/auth/login",
         linkText: "Sign in",
       }}
+      showEmail
       mutation={mutation}
     />
   );

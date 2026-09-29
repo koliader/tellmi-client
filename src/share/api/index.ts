@@ -1,7 +1,32 @@
 import axios from "axios";
 import { tokenStorage } from "./tokenStorage";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+/** Port the Go gateway listens on in development. */
+const GATEWAY_PORT = "8080";
+
+/**
+ * Resolves the gateway base URL.
+ *
+ * `NEXT_PUBLIC_API_URL` wins when set, which is what a deployed build should
+ * do. Otherwise the host is taken from the page's own origin, so the app works
+ * unchanged whether it is opened on `localhost`, on a LAN address from a
+ * phone, or behind a tunnel — instead of the API calls being pointed at
+ * whichever machine happens to be running the browser.
+ */
+const resolveApiUrl = (): string => {
+  const configured = process.env.NEXT_PUBLIC_API_URL;
+  if (configured) {
+    return configured;
+  }
+
+  if (typeof window === "undefined") {
+    return `http://localhost:${GATEWAY_PORT}`;
+  }
+
+  return `${window.location.protocol}//${window.location.hostname}:${GATEWAY_PORT}`;
+};
+
+const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: API_URL,

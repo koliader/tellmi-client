@@ -18,19 +18,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ErrorLabel } from "@/src/share/ui/ErrorLabel";
+import { CategoryBadge } from "@/src/share/ui/CategoryBadge";
 import { CategoriesApiService } from "@/src/share/api/CategoriesApiService";
 import { PostsApiService } from "@/src/share/api/PostsApiService";
 import { ICategory } from "@/src/share/api/model/categories";
-import { IPost } from "@/src/share/api/model/posts";
+import { IPostRow } from "@/src/share/api/model/posts";
 import { IQueryError } from "@/src/share/api/model/api";
 import { toast } from "@/components/ui/toast";
 
 const categoriesApi = new CategoriesApiService();
 const postsApi = new PostsApiService();
 
-export const PostForm: FC = () => {
+interface PostFormProps {
+  /**
+   * When set, the form edits that post instead of creating a new one. The
+   * parent must only render the form once the post has loaded, so that the
+   * default values below are picked up on mount.
+   */
+  post?: IPostRow;
+}
+
+export const PostForm: FC<PostFormProps> = ({ post }) => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const isEditing = Boolean(post);
 
   const {
     register,
@@ -41,9 +52,9 @@ export const PostForm: FC = () => {
   } = useForm<IPostFormValues>({
     mode: "onChange",
     defaultValues: {
-      title: "",
-      categoryId: "",
-      description: "",
+      title: post?.title ?? "",
+      categoryId: post ? String(post.category.id) : "",
+      description: post?.description ?? "",
     },
   });
 
@@ -64,19 +75,39 @@ export const PostForm: FC = () => {
       console.log(`categories: ${categories}`);
     }
   }, [categories]);
-  const createPost = useMutation<
-    IPost,
-    AxiosError<IQueryError>,
-    IPostFormValues
-  >({
-    mutationFn: (values) =>
-      postsApi.create({
+  const savePost = useMutation<void, AxiosError<IQueryError>, IPostFormValues>({
+    mutationFn: async (values) => {
+      const payload = {
         title: values.title,
         description: values.description,
         categoryId: Number(values.categoryId),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      };
+
+      if (post) {
+        await postsApi.edit({ id: post.id, ...payload });
+        return;
+      }
+
+      await postsApi.create(payload);
+    },
+    onSuccess: async () => {
+      if (post) {
+        // Refresh every cached read of this post before navigating, otherwise
+        // the detail page mounts on the stale copy and flashes the old values.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["post", post.id] }),
+          queryClient.invalidateQueries({ queryKey: ["posts"] }),
+        ]);
+        toast.add({
+          type: "success",
+          title: "Post updated",
+          description: "Your changes have been saved!",
+        });
+        router.push(`/posts/${post.id}`);
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["posts"] });
       toast.add({
         type: "success",
         title: "Post created",
@@ -86,21 +117,25 @@ export const PostForm: FC = () => {
     },
     onError: (err) => {
       toast.add({
-        type: "success",
-        title: "Create post",
-        description: err?.response?.data?.error ?? "Failed to create post",
+        type: "error",
+        title: post ? "Edit post" : "Create post",
+        description: err?.response?.data?.error ?? "Failed to save post",
       });
     },
   });
 
-  const onSubmit = handleSubmit((values) => createPost.mutate(values));
+  const onSubmit = handleSubmit((values) => savePost.mutate(values));
 
   return (
     <>
       <form onSubmit={onSubmit} className="py-3 max-w-2xl">
-        <h1 className="text-3xl font-black">New post</h1>
+        <h1 className="text-3xl font-black">
+          {isEditing ? "Edit post" : "New post"}
+        </h1>
         <p className="text-zinc-400 text-sm">
-          Share your thoughts with the community.
+          {isEditing
+            ? "Update the details of your post."
+            : "Share your thoughts with the community."}
         </p>
 
         <div className="py-3 flex flex-col gap-4">
@@ -127,7 +162,7 @@ export const PostForm: FC = () => {
               Category
               {!isCategoriesPending &&
                 !isCategoriesError &&
-                categories === null && (
+                categories?.length === 0 && (
                   <span className="ml-1 text-xs text-muted-foreground">
                     (categories are empty)
                   </span>
@@ -145,7 +180,7 @@ export const PostForm: FC = () => {
                   <SelectTrigger
                     className="w-full"
                     aria-invalid={errors.categoryId ? true : undefined}
-                    disabled={isCategoriesPending || categories === null}
+                    disabled={isCategoriesPending || categories?.length === 0}
                   >
                     <SelectValue>
                       {(value) => {
@@ -160,10 +195,16 @@ export const PostForm: FC = () => {
                             </span>
                           );
                         }
-                        return (
-                          categories?.find(
-                            (category) => String(category.id) === value,
-                          )?.name ?? value
+                        const selected = categories?.find(
+                          (category) => String(category.id) === value,
+                        );
+                        return selected ? (
+                          <CategoryBadge
+                            name={selected.name}
+                            color={selected.color}
+                          />
+                        ) : (
+                          value
                         );
                       }}
                     </SelectValue>
@@ -175,7 +216,10 @@ export const PostForm: FC = () => {
                           key={category.id}
                           value={String(category.id)}
                         >
-                          {category.name}
+                          <CategoryBadge
+                            name={category.name}
+                            color={category.color}
+                          />
                         </SelectItem>
                       ))}
                       {!isCategoriesPending && categories?.length === 0 && (
@@ -227,8 +271,18 @@ export const PostForm: FC = () => {
             )}
           </div>
 
-          <Button type="submit" disabled={createPost.isPending}>
-            {createPost.isPending ? "Creating..." : "Create post"}
+          <Button
+            type="submit"
+            disabled={savePost.isPending}
+            className="cursor-pointer"
+          >
+            {savePost.isPending
+              ? isEditing
+                ? "Saving..."
+                : "Creating..."
+              : isEditing
+                ? "Save changes"
+                : "Create post"}
           </Button>
         </div>
       </form>

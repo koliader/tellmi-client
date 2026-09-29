@@ -5,9 +5,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/*
+ * Only the font stack is set here. Background and text colours come from the
+ * `--background` / `--foreground` tokens via the base layer below, so that the
+ * `.dark` overrides can take effect. Hardcoding `background: #fff` on body
+ * (as an unlayered rule) outranks the layered base styles and pinned the app
+ * to the light theme.
+ */
 body {
-  background: #fff;
-  color: #000;
   font-family: "Google Sans", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
@@ -131,10 +136,69 @@ body {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    @apply font-sans;
+    /* Lets native widgets (scrollbars, date pickers, autofill) follow the
+       theme instead of staying light. */
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
   body {
     @apply bg-background text-foreground;
   }
-  html {
-    @apply font-sans;
+}
+
+/*
+ * These live in the `utilities` layer, not `components`, because the Badge's
+ * `outline` variant sets `border-border` as a utility and a `components` rule
+ * would lose to it on layer order regardless of specificity.
+ *
+ * Category colours are user-chosen, so they can land on either extreme: `#000`
+ * disappears on the dark background and a near-white like `#dbdbdb` disappears
+ * on the light one. The raw value is passed in as `--cat-color` and clamped
+ * into a band that stays legible on the current background -- `min(l, ..)` caps
+ * it in light mode, `max(l, ..)` floors it in dark mode. Clamping rather than
+ * substituting keeps the hue, so a black category reads as neutral grey rather
+ * than as some arbitrary accent colour.
+ *
+ * The pill is mixed against `--background` instead of `transparent` so the
+ * result is opaque and can never resolve to the same value as the page.
+ */
+@layer utilities {
+  .category-badge {
+    --cat-ink: oklch(from var(--cat-color, currentColor) min(l, 0.5) c h);
+    --cat-tint: 16%;
+    --cat-edge: 38%;
+    background-color: color-mix(
+      in oklab,
+      var(--cat-ink) var(--cat-tint),
+      var(--background)
+    );
+    border-color: color-mix(
+      in oklab,
+      var(--cat-ink) var(--cat-edge),
+      var(--background)
+    );
+  }
+
+  .dark .category-badge {
+    /* Lifted well clear of the 0.141 background so even a pure black category
+       produces a visible dot and a perceptible pill. */
+    --cat-ink: oklch(from var(--cat-color, currentColor) max(l, 0.72) c h);
+    --cat-tint: 20%;
+    --cat-edge: 48%;
+  }
+
+  /* An unparseable `--cat-color` makes `--cat-ink` invalid, so the pill falls
+     back to mixing the foreground into the background: still a readable,
+     theme-appropriate chip, and the text keeps its contrast. The dot is the
+     only thing lost -- Chrome resolves the `var()` fallback to transparent
+     here and does not recompute it on a later mutation. That is acceptable
+     because the colour always comes from the admin colour picker or the API,
+     so a malformed value is a bad-database edge case, not a normal one. */
+  .category-badge-dot {
+    background-color: var(--cat-ink, var(--foreground));
   }
 }

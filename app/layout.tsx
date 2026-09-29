@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/src/widgets/Providers/ui";
 import { Toaster } from "@/components/ui/toast";
+import { THEME_INIT_SCRIPT } from "@/src/share/lib/theme";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -21,13 +22,26 @@ export default function RootLayout({
     <html
       lang="en"
       className={cn("h-full", "antialiased", "font-sans", inter.variable)}
+      suppressHydrationWarning
     >
-      <Providers>
-        <body className="min-h-full flex flex-col">
+      <head>
+        {/*
+          Applies the stored theme before the first paint. Without this the
+          page renders light and then flips, because the theme is only known on
+          the client.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col">
+        <Providers>
           <Toaster />
-          {children}
-        </body>
-      </Providers>
+          {/*
+            Bottom padding clears the mobile tab bar, which is fixed to the
+            bottom of the viewport on small screens only.
+          */}
+          <div className="flex flex-1 flex-col pb-16 sm:pb-0">{children}</div>
+        </Providers>
+      </body>
     </html>
   );
 }

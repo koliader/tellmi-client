@@ -31,6 +31,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+/**
+ * Orders booleans as false < true.
+ *
+ * The built-in `auto` sorter does not handle booleans, so a column like
+ * "Blocked" needs this to be sortable in a meaningful order rather than
+ * falling back to an unstable comparison.
+ */
+const booleanOrder = (a: unknown, b: unknown) =>
+  Number(Boolean(a)) - Number(Boolean(b));
+
 /** Shared feature set: sorting, column filtering, pagination. */
 export const dataTableFeatures = tableFeatures({
   rowSortingFeature,
@@ -41,6 +51,9 @@ export const dataTableFeatures = tableFeatures({
   paginatedRowModel: createPaginatedRowModel(),
   filterFns: {
     includesString: filterFn_includesString,
+  },
+  sortFns: {
+    booleanOrder,
   },
 });
 
@@ -117,8 +130,13 @@ export function DataTable<TData extends RowData>({
         />
       ) : null}
 
-      <div className="rounded-md border">
-        <Table>
+      {/*
+        The table keeps its full column set on narrow screens and scrolls
+        sideways, so sorting, search and the row actions stay reachable
+        instead of collapsing into a separate mobile layout.
+      */}
+      <div className="w-full overflow-x-auto rounded-md border">
+        <Table className="min-w-[34rem]">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
