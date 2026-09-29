@@ -3,13 +3,10 @@
 import { FC } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Plus, Tags, Users } from "lucide-react";
+import { Home, Plus, Tags } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ERole, type IPayload } from "@/src/share/types/token";
 
 interface MobileTabBarProps {
-  /** Null while the token is still being read on the client. */
-  payload: IPayload | null;
   /** Slides the bar off-screen while the page is scrolled down. */
   isHidden: boolean;
 }
@@ -22,9 +19,8 @@ interface MobileTabBarProps {
  * `position: fixed` descendant, so nesting this bar would anchor it to the
  * navbar's box and clip it.
  */
-export const MobileTabBar: FC<MobileTabBarProps> = ({ payload, isHidden }) => {
+export const MobileTabBar: FC<MobileTabBarProps> = ({ isHidden }) => {
   const pathname = usePathname();
-  const isAdmin = payload?.role === ERole.Admin;
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);

@@ -8,7 +8,6 @@ import {
   Plus,
   ShieldCheck,
   Sun,
-  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,14 +81,6 @@ export const Navbar = () => {
                     render={<Link href="/posts" />}
                   >
                     Posts
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    nativeButton={false}
-                    render={<Link href="/categories" />}
-                  >
-                    Categories
                   </Button>
 
                   <Separator orientation="vertical" className="mx-1 h-6" />
@@ -217,7 +208,7 @@ export const Navbar = () => {
         would otherwise become the containing block for this fixed element and
         clip it to the navbar's box.
       */}
-      <MobileTabBar payload={payload} isHidden={isScrollingDown} />
+      <MobileTabBar isHidden={isScrollingDown} />
     </>
   );
 };

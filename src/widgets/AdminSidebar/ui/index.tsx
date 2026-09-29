@@ -7,13 +7,11 @@ import {
   ExternalLink,
   FileText,
   LogOut,
-  Menu,
   MessageSquareText,
   Tags,
   Users,
 } from "lucide-react";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
-import type { IPayload } from "@/src/share/types/token";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
@@ -60,7 +58,6 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({
   const router = useRouter();
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
-  const [payload, setPayload] = useState<IPayload | null>(null);
 
   // Falls back to internal state so the sidebar still works standalone.
   const isControlled = isOpenProp !== undefined;
@@ -74,10 +71,6 @@ export const AdminSidebar: FC<AdminSidebarProps> = ({
     },
     [isControlled, onOpenChange],
   );
-
-  useEffect(() => {
-    setPayload(tokenStorage.getPayload());
-  }, []);
 
   // Profile, shared with the navbar so an expired or blocked session is
   // handled in one place.
