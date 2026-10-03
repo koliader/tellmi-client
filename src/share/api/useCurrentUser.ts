@@ -7,6 +7,7 @@ import { AxiosError } from "axios";
 import { tokenStorage } from "@/src/share/api/tokenStorage";
 import { UsersApiService } from "@/src/share/api/UsersApiService";
 import { IQueryError } from "@/src/share/api/model/api";
+import { avatarUrl } from "@/src/share/lib/avatar";
 import { IUserRes } from "@/src/share/api/model/users";
 import type { IPayload } from "@/src/share/types/token";
 
@@ -21,6 +22,14 @@ export interface IUseCurrentUser {
   /** Safe to render: the username, or a neutral placeholder. */
   initial: string;
   username: string;
+  /**
+   * The signed-in member's avatar URL, or null when they have not set one.
+   *
+   * Null is a real answer rather than "not known yet", so a caller renders the
+   * initials fallback without having to wait. /me is the only endpoint that
+   * reports avatar state for the current user.
+   */
+  avatarUrl: string | null;
 }
 
 /**
@@ -73,5 +82,10 @@ export const useCurrentUser = (): IUseCurrentUser => {
     isLoadingProfile: Boolean(payload) && isPending && isFetching,
     initial: username ? username.charAt(0).toUpperCase() : "?",
     username,
+    // Resolved once here rather than re-derived at each call site, so "does this
+    // member have a picture, and where does it live" is a single rule.
+    avatarUrl: data
+      ? avatarUrl(data.id, data.hasAvatar, data.avatarUpdatedAt)
+      : null,
   };
 };

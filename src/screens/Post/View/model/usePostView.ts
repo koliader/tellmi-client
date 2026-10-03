@@ -1,6 +1,8 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUndo } from "@/src/share/ui/UndoProvider";
 import { useRouter } from "next/navigation";
 import { AxiosError } from "axios";
 import { CommentsApiService } from "@/src/share/api/CommentsApiService";
@@ -32,6 +34,19 @@ export interface IUsePostView {
   canModifyComment: (comment: ICommentRow) => boolean;
   createComment: (comment: string) => void;
   isCreatingComment: boolean;
+  /**
+   * The id of the comment this visitor just wrote, or null once its
+   * acknowledgement has finished.
+   *
+   * Posting a comment clears the box and refetches the thread, and in the gap
+   * between those two nothing at all indicates the post went anywhere. This is
+   * the one piece of state that can tell the thread which row to mark, so it
+   * carries the id the server assigned rather than anything inferred from the
+   * order of the list.
+   */
+  justPostedCommentId: number | null;
+  /** Retires the acknowledgement. Called by the thread once the row is shown. */
+  clearJustPostedComment: () => void;
   editComment: (id: number, comment: string) => void;
   isEditingComment: (id: number) => boolean;
   deleteComment: (id: number) => void;
@@ -43,6 +58,8 @@ export interface IUsePostView {
 export const usePostView = (postId: string): IUsePostView => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  // Layout-level, so the bar survives the redirect below.
+  const { offer: offerUndo } = useUndo();
 
   const {
     data: post,
@@ -63,14 +80,28 @@ export const usePostView = (postId: string): IUsePostView => {
     enabled: Boolean(postId),
   });
 
+  // See the interface: the row to mark as newly written, and the hand-off that
+  // retires it once the thread has had time to show it.
+  const [justPostedCommentId, setJustPostedCommentId] = useState<number | null>(
+    null,
+  );
+  const clearJustPostedComment = useCallback(() => setJustPostedCommentId(null), []);
+
   const createCommentMutation = useMutation<
-    void,
+    { id?: number },
     AxiosError<IQueryError>,
     string
   >({
     mutationFn: (comment) =>
       commentsApi.create({ comment, postId: Number(postId) }),
-    onSuccess: async () => {
+    onSuccess: async (created) => {
+      // A malformed answer is treated as no answer: no row gets marked, which
+      // is the quiet failure, rather than a row that does not exist getting an
+      // acknowledgement aimed at it.
+      if (typeof created?.id === "number" && created.id > 0) {
+        setJustPostedCommentId(created.id);
+      }
+
       // The thread and the post's comment counter both change.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: commentsKey(postId) }),
@@ -82,10 +113,28 @@ export const usePostView = (postId: string): IUsePostView => {
   const deletePostMutation = useMutation<void, AxiosError<IQueryError>, void>({
     mutationFn: () => postsApi.remove(postId),
     onSuccess: async () => {
-      // The post is gone, so drop every cached read of it and leave the feed.
+      /*
+       * The page is left immediately. The post is unreadable the moment the
+       * request returns, so staying on it would show a 404 to someone who just
+       * pressed a button that appeared to work -- and the undo bar is rendered
+       * outside the router, so it survives the navigation.
+       */
       queryClient.removeQueries({ queryKey: postKey(postId) });
       await queryClient.invalidateQueries({ queryKey: ["posts"] });
       router.push("/posts");
+
+      /*
+       * Offered after the redirect, not before, so the bar is already on screen
+       * where the reader lands rather than appearing over a page they are leaving.
+       */
+      offerUndo("Post deleted", async () => {
+        await postsApi.restore(postId);
+        // Drop the negative cache entry the delete left behind, or a later visit
+        // would re-fetch into a query marked fresh and show the post as missing
+        // for the rest of the session.
+        queryClient.removeQueries({ queryKey: postKey(postId) });
+        await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      });
     },
   });
 
@@ -133,8 +182,15 @@ export const usePostView = (postId: string): IUsePostView => {
     isSignedIn,
     canModifyComment: (comment) =>
       Boolean(payload) && (isAdmin || payload?.id === comment.user.id),
-    createComment: (comment) => createCommentMutation.mutate(comment),
+    createComment: (comment) => {
+      // Cleared before the new request rather than after it, so a second post
+      // cannot leave the previous row still marked while its own is in flight.
+      setJustPostedCommentId(null);
+      createCommentMutation.mutate(comment);
+    },
     isCreatingComment: createCommentMutation.isPending,
+    justPostedCommentId,
+    clearJustPostedComment,
     editComment: (id, comment) => editCommentMutation.mutate({ id, comment }),
     isEditingComment: (id) =>
       editCommentMutation.isPending && editCommentMutation.variables?.id === id,

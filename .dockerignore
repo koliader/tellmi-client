@@ -1,0 +1,31 @@
+# Keeps the build context small and correct.
+#
+# Without this, `node_modules` (larger than the resulting image) and every previous
+# `.next` build are uploaded to the daemon on every single build, which is the
+# difference between a few seconds and a couple of minutes.
+
+node_modules
+.next
+out
+dist
+
+# Not needed to build, and some of these are large or machine-specific.
+.git
+.gitignore
+.env
+.env.*
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor and OS noise.
+.DS_Store
+.idea
+.vscode
+*.swp
+
+# The Dockerfile and this file are not part of the dependency graph or the
+# source tree the app serves, so keeping them out avoids a needless cache bust
+# when only a comment changes.
+Dockerfile
+.dockerignore

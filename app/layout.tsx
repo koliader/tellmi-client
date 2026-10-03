@@ -1,12 +1,26 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Google_Sans } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Providers } from "@/src/widgets/Providers/ui";
 import { Toaster } from "@/components/ui/toast";
 import { THEME_INIT_SCRIPT } from "@/src/share/lib/theme";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+/**
+ * Self-hosted by next/font, so the stylesheet and the woff2 files are served
+ * from this origin, preloaded, and discovered without a render-blocking
+ * `@import` to a third-party CDN.
+ *
+ * This was Inter while `globals.css` separately pulled Google Sans from
+ * fonts.googleapis.com and set `body { font-family: "Google Sans" }` — so Inter
+ * was downloaded, overridden, and never rendered, while the typeface actually
+ * used arrived through a serial third-party request. One mechanism now.
+ */
+const googleSans = Google_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -21,7 +35,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={cn("h-full", "antialiased", "font-sans", inter.variable)}
+      className={cn("h-full", "antialiased", "font-sans", googleSans.variable)}
       suppressHydrationWarning
     >
       <head>

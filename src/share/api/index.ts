@@ -28,6 +28,21 @@ const resolveApiUrl = (): string => {
 
 const API_URL = resolveApiUrl();
 
+/**
+ * Absolute URL for a gateway-served path, for anything the browser loads
+ * directly rather than through axios.
+ *
+ * Needed because an <img src> or a CSS url() cannot go through the axios
+ * instance, so it does not get the base URL or the Authorization header applied
+ * for it. Without this an avatar would be requested from the Next dev server,
+ * which does not serve /avatars, and every picture would be a 404.
+ *
+ * Safe for unauthenticated paths only -- a token cannot be attached to a
+ * subresource request, so anything requiring auth has to go through `api`.
+ */
+export const gatewayUrl = (path: string): string =>
+  `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
+
 export const api = axios.create({
   baseURL: API_URL,
 });

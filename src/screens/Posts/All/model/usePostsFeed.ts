@@ -107,7 +107,6 @@ export interface IUsePostsFeed {
 export const usePostsFeed = (
   initialFilters: IPostsFilters = DEFAULT_POSTS_FILTERS,
 ): IUsePostsFeed => {
-  const router = useRouter();
   const pathname = usePathname();
 
   const [filters, setFilters] = useState<IPostsFilters>(initialFilters);

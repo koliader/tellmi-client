@@ -3,8 +3,10 @@
 import { useEffect, FC } from "react";
 import { toast } from "@/components/ui/toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useCountUp } from "@/src/share/lib/useCountUp";
 import { usePostsFeed, type IPostsFiltersSeed } from "../model/usePostsFeed";
 import { PostCard } from "./PostCard";
+import { NoResults } from "./NoResults";
 import { PostsFilters } from "./PostsFilters";
 import { LoadMoreSentinel } from "./LoadMoreSentinel";
 
@@ -14,6 +16,28 @@ interface AllPostsPageProps {
   /** Filters parsed from the query string on the server. */
   initialFilters: IPostsFiltersSeed;
 }
+
+/**
+ * How many posts the filters match.
+ *
+ * Counts up rather than snapping, because on this page the count is the only
+ * thing that reports what a filter change did. The list itself holds the
+ * previous result while the new one loads, so for as long as that takes the
+ * only evidence that a category or a sort order did anything is this figure
+ * moving. Asking for more posts, or a different category, and watching it land
+ * is the feedback that closes the loop.
+ */
+const ResultCount: FC<{ total: number }> = ({ total }) => {
+  const counted = useCountUp(total);
+
+  return (
+    <p className="shrink-0 text-sm text-muted-foreground">
+      <span aria-hidden>{`${counted ?? 0} `}</span>
+      <span className="sr-only">{`${total} `}</span>
+      {total === 1 ? "post" : "posts"}
+    </p>
+  );
+};
 
 export const AllPostsPage: FC<AllPostsPageProps> = ({ initialFilters }) => {
   const {
@@ -43,20 +67,16 @@ export const AllPostsPage: FC<AllPostsPageProps> = ({ initialFilters }) => {
     }
   }, [error]);
 
-  const hasFilters =
-    filters.search !== "" ||
-    filters.categoryId !== 0 ||
-    filters.sort !== "newest";
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-4">
         <h1 className="text-2xl font-bold tracking-tight">Posts</h1>
-        <p className="shrink-0 text-sm text-muted-foreground">
-          {isPending
-            ? "…"
-            : `${totalCount} ${totalCount === 1 ? "post" : "posts"}`}
-        </p>
+        {isPending ? (
+          <p className="shrink-0 text-sm text-muted-foreground">…</p>
+        ) : (
+          <ResultCount total={totalCount} />
+        )}
       </div>
 
       <PostsFilters
@@ -84,6 +104,15 @@ export const AllPostsPage: FC<AllPostsPageProps> = ({ initialFilters }) => {
           ))}
         </div>
       ) : posts.length ? (
+        /*
+          The dim is the loading acknowledgement for a filter change: the list
+          holds its previous result while the new one is fetched, and without
+          this the list would simply sit there looking final.
+
+          A plain block comment rather than a JSX comment container: this sits
+          inside a ternary branch, which takes exactly one expression, so a
+          comment container here would count as a second child.
+        */
         <div
           className={`flex flex-col gap-3 transition-opacity ${
             isFetching && !isFetchingNextPage ? "opacity-60" : "opacity-100"
@@ -94,13 +123,19 @@ export const AllPostsPage: FC<AllPostsPageProps> = ({ initialFilters }) => {
           ))}
         </div>
       ) : (
-        <div className="rounded-lg border border-dashed p-12 text-center">
-          <p className="text-sm text-muted-foreground">
-            {hasFilters
-              ? "No posts match your filters."
-              : "No posts yet. Be the first to write one."}
-          </p>
-        </div>
+        /*
+          Settles for the same reason the cards do: narrowing the filters until
+          nothing matches replaces the whole list with this box, and a box that
+          appears by subtraction is easy to miss entirely -- the visitor has no
+          way to tell whether the feed is genuinely empty or failed to re-render.
+        */
+        <NoResults
+          search={filters.search}
+          categoryId={filters.categoryId}
+          categoryName={categories.find((c) => c.id === filters.categoryId)?.name}
+          onClearSearch={() => setSearch("")}
+          onClearCategory={() => setCategoryId(0)}
+        />
       )}
 
       {!isPending && posts.length > 0 ? (

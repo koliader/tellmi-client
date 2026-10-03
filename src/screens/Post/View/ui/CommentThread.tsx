@@ -11,6 +11,8 @@ interface CommentThreadProps {
   canModifyComment: (comment: ICommentRow) => boolean;
   isEditingComment: (id: number) => boolean;
   deletingCommentId: number | null;
+  /** Id of the comment this visitor just wrote, if any. */
+  justPostedCommentId: number | null;
   onEdit: (id: number, comment: string) => void;
   onDelete: (id: number) => void;
 }
@@ -23,6 +25,7 @@ export const CommentThread: FC<CommentThreadProps> = ({
   canModifyComment,
   isEditingComment,
   deletingCommentId,
+  justPostedCommentId,
   onEdit,
   onDelete,
 }) => {
@@ -51,7 +54,14 @@ export const CommentThread: FC<CommentThreadProps> = ({
   }
 
   return (
-    <ul className="flex flex-col gap-4">
+    /*
+      Settled as one block rather than row by row. The rows are a conversation
+      read top to bottom, so staggering them would imply an order the thread
+      does not have -- and the one row that does need to be singled out is
+      marked by the wash instead, which says "this one" rather than "these
+      arrived".
+    */
+    <ul className="settle flex flex-col gap-4">
       {comments.map((comment) => (
         <CommentItem
           key={comment.id}
@@ -59,6 +69,7 @@ export const CommentThread: FC<CommentThreadProps> = ({
           canModify={canModifyComment(comment)}
           isSaving={isEditingComment(comment.id)}
           isDeleting={deletingCommentId === comment.id}
+          isJustPosted={comment.id === justPostedCommentId}
           onEdit={(text) => onEdit(comment.id, text)}
           onDelete={() => onDelete(comment.id)}
         />

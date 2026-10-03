@@ -11,11 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CategoryBadge } from "@/src/share/ui/CategoryBadge";
+import { CategorySelect } from "@/src/share/ui/CategorySelect";
 import { ICategory } from "@/src/share/api/model/categories";
 import { TPostsSort } from "@/src/share/api/model/posts";
-
-const ALL_CATEGORIES = "all";
 
 interface PostsFiltersProps {
   search: string;
@@ -46,46 +44,40 @@ export const PostsFilters: FC<PostsFiltersProps> = ({
         type="search"
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
-        placeholder="Search posts"
-        aria-label="Search posts by title"
+        placeholder="Search posts or people"
+        aria-label="Search posts by title or author"
+        /*
+         * Both the placeholder and the accessible name say the author is searched,
+         * because it is. A box labelled "Search posts" that also matches a name
+         * does something its label does not mention, and a visitor who types a
+         * person's name and gets results cannot tell whether they matched the name
+         * or a lucky word in a title.
+         */
         className="pl-8"
       />
     </div>
 
-    <Select
-      value={categoryId ? String(categoryId) : ALL_CATEGORIES}
-      onValueChange={(value) =>
-        onCategoryChange(value === ALL_CATEGORIES ? 0 : Number(value))
-      }
-    >
-      <SelectTrigger className="w-full cursor-pointer sm:w-44" aria-label="Filter by category">
-        <SelectValue>
-          {() => {
-            const selected = categories.find((c) => c.id === categoryId);
-            return selected ? selected.name : "All categories";
-          }}
-        </SelectValue>
-      </SelectTrigger>
-      <SelectContent>
-        <SelectGroup>
-          <SelectItem value={ALL_CATEGORIES}>All categories</SelectItem>
-          {categories.map((category) => (
-            <SelectItem key={category.id} value={String(category.id)}>
-              <CategoryBadge
-                name={category.name}
-                color={category.color}
-              />
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      </SelectContent>
-    </Select>
+    {/*
+      Searchable rather than a fixed list. Fine at eight categories, unusable at
+      forty -- and the reserved fallback is excluded, so this shows one fewer than
+      the category page does, which is correct: it is not a topic to filter by.
+    */}
+    <CategorySelect
+      id="posts-category-filter"
+      categories={categories}
+      value={categoryId}
+      onChange={onCategoryChange}
+      className="w-full sm:w-48"
+    />
 
     <Select
       value={sort}
       onValueChange={(value) => onSortChange(value as TPostsSort)}
     >
-      <SelectTrigger className="w-full cursor-pointer sm:w-40" aria-label="Sort posts">
+      <SelectTrigger
+        className="w-full cursor-pointer sm:w-40"
+        aria-label="Sort posts"
+      >
         <SelectValue>
           {() => (sort === "oldest" ? "Oldest" : "Newest")}
         </SelectValue>

@@ -3,6 +3,20 @@ import path from "node:path";
 
 const nextConfig: NextConfig = {
   /**
+   * Emits `.next/standalone`, a self-contained server with only the node_modules
+   * actually reached at runtime.
+   *
+   * Needed for the container: `next start` requires the full dependency tree, which
+   * for this project is a dev toolchain (eslint, typescript, the test runners) that
+   * has no business in a production image. Standalone also removes the need to
+   * ship `node_modules` separately, and copies only the files the trace found.
+   *
+   * `public/` and `.next/static` are deliberately NOT copied by it, so the
+   * Dockerfile copies those two itself; see the note there.
+   */
+  output: "standalone",
+
+  /**
    * Serves the Go gateway on this origin under `/api`, so the site and its API
    * answer on a single hostname.
    *
@@ -19,6 +33,13 @@ const nextConfig: NextConfig = {
    *
    * `GATEWAY_ORIGIN` exists so a deployed build can point at a gateway on
    * another host; in development it is the local one.
+   *
+   * IMPORTANT: this is a BUILD-TIME value, not a runtime one. `rewrites()` runs
+   * during `next build` and the result is serialised into
+   * `.next/routes-manifest.json`; `next start` does not re-run it. Verified by
+   * building with one value and starting the server with another -- the server
+   * still dialled the built value. So the Dockerfile passes this as a build ARG,
+   * and moving the gateway means a rebuild, not a pod restart.
    */
   async rewrites() {
     const origin = process.env.GATEWAY_ORIGIN ?? "http://localhost:8080";

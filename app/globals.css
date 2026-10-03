@@ -1,4 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700;1,17..18,400..700&display=swap");
+/*
+ * No `@import` for the typeface here on purpose. A CSS `@import` of a remote
+ * stylesheet is render-blocking and serial: the browser must finish this file,
+ * discover the import, fetch that stylesheet, and only then start on the font
+ * files -- three round trips before any text paints, plus a visitor's IP handed
+ * to a third party. `next/font` in the root layout self-hosts the same family
+ * and preloads it, and `--font-sans` feeds the `font-sans` utility below.
+ */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -11,9 +18,15 @@
  * `.dark` overrides can take effect. Hardcoding `background: #fff` on body
  * (as an unlayered rule) outranks the layered base styles and pinned the app
  * to the light theme.
+ *
+ * `font-family` is deliberately absent. It used to name "Google Sans"
+ * literally, which shadowed the `font-sans` utility and so defeated the
+ * next/font family declared in the root layout -- the variable font arrived,
+ * was ignored, and the browser fell back to a local or generic face.
+ * `--font-sans`, wired to `font-sans` through `@theme inline`, is the single
+ * source now; what is left below only means anything for a variable face.
  */
 body {
-  font-family: "Google Sans", sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
@@ -96,6 +109,34 @@ body {
   --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
+
+  /*
+   * Motion.
+   *
+   * Three curves for three different jobs, rather than one curve everywhere.
+   * `--motion-decel` is a confident arrival -- a long flat tail, so nothing
+   * eases out slowly enough to look like it is still waiting for something.
+   * `--motion-press` is contact under a finger: quick in, quick out, so a
+   * button does not feel sticky after it is tapped. `--motion-exit` leaves
+   * faster than anything arrives, because content on its way out should stop
+   * competing for attention.
+   *
+   * The durations are referenced by the reduced-motion rule further down, so
+   * they live here rather than being repeated at each call site.
+   */
+  --motion-decel: cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-press: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-exit: cubic-bezier(0.4, 0, 1, 1);
+  --motion-tap: 120ms;
+  --motion-state: 200ms;
+  --motion-settle: 340ms;
+  --motion-measure: 620ms;
+  /*
+   * Long on purpose, and the longest thing here. The wash is not there to be
+   * missed -- it is there to be noticed once, after an action the visitor
+   * took and got no other confirmation of -- and then to get out of the way.
+   */
+  --motion-landed: 1500ms;
 }
 
 .dark {
@@ -167,8 +208,23 @@ body {
  * result is opaque and can never resolve to the same value as the page.
  */
 @layer utilities {
+  /*
+   * The clamp on its own, so a component that wants to paint directly with a
+   * category colour -- the home page's category bars -- gets the same
+   * legibility guarantee as the badge. Listed alongside `.category-badge` so
+   * there is one declaration rather than two copies to keep in step, and it
+   * paints the colour itself so callers only have to supply `--cat-color`.
+   */
+  .category-ink,
   .category-badge {
     --cat-ink: oklch(from var(--cat-color, currentColor) min(l, 0.5) c h);
+  }
+
+  .category-ink {
+    background-color: var(--cat-ink, var(--foreground));
+  }
+
+  .category-badge {
     --cat-tint: 16%;
     --cat-edge: 38%;
     background-color: color-mix(
@@ -183,10 +239,14 @@ body {
     );
   }
 
+  .dark .category-ink,
   .dark .category-badge {
     /* Lifted well clear of the 0.141 background so even a pure black category
        produces a visible dot and a perceptible pill. */
     --cat-ink: oklch(from var(--cat-color, currentColor) max(l, 0.72) c h);
+  }
+
+  .dark .category-badge {
     --cat-tint: 20%;
     --cat-edge: 48%;
   }
@@ -201,4 +261,227 @@ body {
   .category-badge-dot {
     background-color: var(--cat-ink, var(--foreground));
   }
+
+  /*
+   * The one moving moment on the home page: the distribution bars grow from
+   * nothing once, as the counts land. `from` is the only keyframe given, so the
+   * element's own width -- set inline from the data -- is the destination and
+   * the animation needs no knowledge of it.
+   *
+   * The bar is the page's single entrance, not a repeated effect: it plays
+   * once per mount, and it carries meaning, because the width is the data.
+   *
+   * `--bar-delay` is what turns it from decoration into a reading. The tiles
+   * are sorted busiest first, so staggering the growth down that order lets
+   * the eye follow the distribution descending rather than seeing every bar
+   * twitch at once. The delay is capped at the call site: without a cap, a
+   * board with many categories would leave the last bars still growing long
+   * after the page had settled.
+   */
+  .bar-grow {
+    animation: bar-grow var(--motion-measure) var(--motion-decel)
+      var(--bar-delay, 0ms) both;
+  }
+
+  /*
+   * `.settle` -- the moment data lands.
+   *
+   * Panels here swap a skeleton for real content the instant a query
+   * resolves, which reads as a jump cut: the skeleton vanishes and new text
+   * is simply there. This is the handoff. The arriving block fades up over a
+   * few pixels and resolves out of a shallow blur, so the eye is given the
+   * fact that something was fetched rather than having to infer it.
+   *
+   * The animation is additive. The element's own state is its final state and
+   * only the `from` frame is hidden, so if this class never runs, or the
+   * browser drops the animation, the content is simply visible -- which is the
+   * only acceptable failure mode for a page whose panels are the product.
+   *
+   * Uses the standalone `translate` property rather than `transform` so an
+   * element that also carries a transform of its own (a hover rotate, a
+   * tab-bar offset) keeps it instead of having it overwritten.
+   *
+   * `--settle-delay` staggers a list on the same clock as its bars.
+   */
+  .settle {
+    animation: settle var(--motion-settle) var(--motion-decel)
+      var(--settle-delay, 0ms) both;
+  }
+
+  /*
+   * `.fade-swap` -- the same handoff without travel, for the elements a
+   * transform is not safe on. A table row is one: transforming it makes the
+   * browser rebuild the table's layout around a moving cell, which is both
+   * expensive and visually wrong. Opacity is the whole of the change here.
+   */
+  .fade-swap {
+    animation: fade-swap var(--motion-state) ease-out var(--settle-delay, 0ms)
+      both;
+  }
+
+  /*
+   * `.landed` -- a comment you just posted arriving.
+   *
+   * Posting clears the box and refetches the thread, and in the gap between
+   * the two there is no evidence the post went anywhere: the textarea is
+   * simply empty again. This is that evidence. An ink wash marks the row as
+   * yours and then lifts, so the row is singled out and afterwards rejoins the
+   * thread as ordinary history.
+   *
+   * It plays once, on the row the API said it created -- not on "the last
+   * row", which would mark someone else's comment as yours if two people
+   * posted at once.
+   *
+   * Linear, with the hold built into the keyframes rather than into the easing,
+   * because this is a mark and not an arrival. The page's arrival curve is so
+   * front-loaded that a background moving along it is most of the way gone
+   * within a frame of appearing, which turns the only confirmation this action
+   * gets into a blink. Held at full strength for the first third and then
+   * drained evenly, it stays readable for about a second and a half and lifts
+   * off like a highlighter rather than like a flashbulb.
+   */
+  .landed {
+    animation: ink-wash var(--motion-landed) linear both;
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    translate: 0 6px;
+  }
+}
+
+@keyframes fade-swap {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    width: 0;
+  }
+}
+
+/*
+ * The hold is in here rather than in a timing function: with `linear` overall,
+ * the third-of-the-way stop puts roughly half a second of full-strength ink
+ * before the drain begins, which is what makes the row readable as "yours"
+ * rather than merely different.
+ */
+@keyframes ink-wash {
+  0% {
+    background-color: transparent;
+  }
+
+  8%,
+  32% {
+    background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+/*
+ * Reduced motion, handled as one system rather than per effect.
+ *
+ * The rule here is that travel is what triggers motion sensitivity, so every
+ * distance-based effect loses its movement and keeps whatever reports a state.
+ * Nothing is switched off wholesale: dropping an animation's opacity as well
+ * as its movement would take the feedback with it, and feedback that confirms
+ * an action has to survive.
+ *
+ * So `.settle` becomes a plain fade at routine-transition speed. `.bar-grow`
+ * lands on the width the data gave it -- the bar is the data, so the bar must
+ * still be there, just not drawn in.
+ *
+ * The one thing that is genuinely removed rather than softened is the
+ * navigation bars sliding out from under a scroll. That is not a decorative
+ * travel to shorten, it is a distance the page moves in response to the
+ * visitor's own scrolling -- so `useScrollingDown` simply reports "not
+ * scrolling" for these visitors and the bars stay put, with nothing to
+ * compensate for. There is no CSS rule for it because the fix is not a faster
+ * slide, it is no slide at all.
+ */
+/*
+ * Reduced transparency, which is a separate preference from reduced motion and is
+ * not implied by it -- someone can want less motion and still want the frosting.
+ *
+ * The nav bar, the mobile tab bar and the graduated frost under the nav all rely
+ * on `backdrop-filter`, and frosting is exactly what this preference exists to
+ * remove. The layer stack is switched off rather than made fainter: a
+ * `backdrop-filter` at low opacity costs the same to composite and still shows the
+ * blurred content behind it.
+ *
+ * The fallback is an opaque bar, not the absence of one. Losing the blur without
+ * replacing the background would put page content straight through the nav, which
+ * is worse than either the frosted or the solid version.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  [data-slot="blur-layers"] {
+    display: none;
+  }
+
+  /*
+   * Translucency is what let text behind show through -- not the blur on its own --
+   * so it is the background that must become opaque, not just the filter.
+   */
+  [data-frost] {
+    background-color: var(--background);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * `.fade-swap` needs no rule: it is opacity only already, so there is no
+   * travel in it to take away.
+   */
+
+  /* The arrival survives; the travel and the blur do not. */
+  .settle {
+    animation-name: settle-fade;
+    animation-duration: var(--motion-state);
+  }
+
+  /*
+   * `.bar-grow` lands straight on the width the data gave it. The bar is the
+   * data, so it has to still be there -- it just is not drawn in.
+   */
+  .bar-grow {
+    animation-name: none;
+  }
+
+  /*
+   * `.landed` needs no rule at all, which is the point of choosing a colour
+   * drain over a movement for this one: it is already the shape of feedback
+   * that reduced motion leaves intact. It is also the only confirmation a
+   * posted comment gets, so taking it away would be taking away the evidence
+   * that the action worked.
+   */
+}
+
+@keyframes settle-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/*
+ * Selection is a browser surface no design system ships, so it arrives as the
+ * platform's blue over a page built on zinc. Tinting it from the foreground
+ * keeps the highlight on-palette in both themes, and the tint follows the
+ * theme because it is mixed against `--background` at paint time.
+ */
+::selection {
+  background-color: color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+/* The caret is the other default the app owns: matching it to the ink stops a
+   blue caret appearing in a monochrome field. */
+:root {
+  caret-color: var(--foreground);
 }

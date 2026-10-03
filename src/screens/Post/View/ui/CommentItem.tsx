@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { FC, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Check, Loader2, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "@/components/ui/toast";
+import { UserAvatar } from "@/src/share/ui/UserAvatar";
 import { formatRelativeTime } from "@/src/share/lib/formatRelativeTime";
 import { ICommentRow } from "@/src/share/api/model/comments";
 
@@ -24,6 +27,8 @@ interface CommentItemProps {
   canModify: boolean;
   isSaving: boolean;
   isDeleting: boolean;
+  /** True for the comment this visitor has just written. */
+  isJustPosted?: boolean;
   onEdit: (comment: string) => void;
   onDelete: () => void;
 }
@@ -33,6 +38,7 @@ export const CommentItem: FC<CommentItemProps> = ({
   canModify,
   isSaving,
   isDeleting,
+  isJustPosted = false,
   onEdit,
   onDelete,
 }) => {
@@ -63,12 +69,28 @@ export const CommentItem: FC<CommentItemProps> = ({
   };
 
   return (
-    <li className="flex items-start gap-3">
+    // The negative margin and its matching padding let the wash sit slightly
+    // inside the thread's left edge, so a newly written comment is marked as a
+    // row rather than as a full-bleed band across the section. They cancel, so
+    // the row sits exactly where it did before.
+    <li
+      className={cn(
+        "flex items-start gap-3 rounded-lg -mx-2 px-2",
+        isJustPosted && "landed",
+      )}
+    >
       <span
         aria-hidden
         className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground"
       >
-        {comment.user.username?.charAt(0).toUpperCase() ?? "?"}
+        <UserAvatar
+          id={comment.user.id}
+          username={comment.user.username}
+          hasAvatar={comment.user.hasAvatar}
+          avatarUpdatedAt={comment.user.avatarUpdatedAt}
+          className="size-6 shrink-0"
+          fallbackClassName="text-xs"
+        />
       </span>
 
       <div className="min-w-0 flex-1">
@@ -111,12 +133,33 @@ export const CommentItem: FC<CommentItemProps> = ({
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-x-2">
-              <span className="text-sm font-medium">
+              <Link
+                href={`/u/${comment.user.id}`}
+                className="rounded text-sm font-medium hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
                 {comment.user.username}
-              </span>
+              </Link>
               {comment.createdAt ? (
                 <span className="text-xs text-muted-foreground">
                   {formatRelativeTime(comment.createdAt)}
+                  {/*
+                    * The marker, and the only thing that says a thought changed.
+                    * Timestamped rather than bare "edited" so a reader can judge how
+                    * stale the revision is, and wrapped in a title because the
+                    * relative time is too small to read precisely.
+                    *
+                    * Driven by updatedAt alone: it is zero when the comment has
+                    * never been edited, so there is no separate flag that could
+                    * claim an edit that did not happen.
+                    */}
+                  {comment.updatedAt ? (
+                    <>
+                      {" · "}
+                      <span title={`edited ${formatRelativeTime(comment.updatedAt)}`}>
+                        edited
+                      </span>
+                    </>
+                  ) : null}
                 </span>
               ) : null}
 
@@ -149,7 +192,7 @@ export const CommentItem: FC<CommentItemProps> = ({
                 </span>
               ) : null}
             </div>
-            <p className="mt-0.5 text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
+            <p className="mt-0.5 max-w-[68ch] text-sm leading-relaxed whitespace-pre-wrap text-foreground/90">
               {comment.comment}
             </p>
           </>

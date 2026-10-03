@@ -175,8 +175,23 @@ export function DataTable<TData extends RowData>({
           </TableHeader>
           <TableBody>
             {rows.length ? (
+              /*
+                Keyed by page as well as by row, so turning the page remounts
+                every row. Without the page in the key, a row that happens to
+                appear on both pages would survive the change and the table
+                would replace only some of its rows -- which reads as the table
+                having failed to paginate rather than as having paginated.
+
+                `fade-swap` is opacity only, deliberately. A transform on a
+                `tr` makes the browser rebuild the table's layout around a
+                moving row; the whole job here is to mark the swap, and opacity
+                is enough to do it.
+              */
               rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={`${currentPage}-${row.id}`}
+                  className="fade-swap"
+                >
                   {row.getAllCells().map((cell) => (
                     <TableCell key={cell.id}>
                       <table.FlexRender cell={cell} />
@@ -185,7 +200,7 @@ export function DataTable<TData extends RowData>({
                 </TableRow>
               ))
             ) : (
-              <TableRow>
+              <TableRow className="fade-swap">
                 <TableCell
                   colSpan={columns.length}
                   className="h-24 text-center text-muted-foreground"

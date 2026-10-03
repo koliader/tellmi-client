@@ -32,11 +32,28 @@ export const MobileTabBar: FC<MobileTabBarProps> = ({ isHidden }) => {
     { href: "/posts", label: "Posts", icon: Tags },
   ];
 
+  /*
+   * The one place the phone has an active state worth acknowledging, since the
+   * thumb covers the tab it is pressing. A touch has no hover to lean on, so
+   * without this the only feedback a tap gets is the navigation that follows
+   * it -- which is a whole route change away, and no feedback at all if the
+   * link is the current page.
+   */
+  const pressable = "transition-[color,transform] duration-150 ease-out active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100";
+
   return (
     <nav
       aria-label="Primary"
       className={cn(
-        "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/60 backdrop-blur-md transition-transform duration-300 ease-out sm:hidden",
+        /*
+         * `pb-[env(safe-area-inset-bottom)]` is the part that matters and is easy
+         * to miss. On a phone with a home indicator, `bottom-0` puts the bar
+         * underneath it, so the bar's touch targets end up inside the region the
+         * system reserves for the home gesture -- taps near the bottom do nothing,
+         * or dismiss the bar instead of activating a tab. env() resolves to 0 on a
+         * device with no inset, so nothing is reserved there.
+         */
+        "fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/60 backdrop-blur-md pb-[env(safe-area-inset-bottom)] transition-transform duration-300 ease-out sm:hidden",
         isHidden ? "translate-y-full" : "translate-y-0",
       )}
     >
@@ -49,7 +66,10 @@ export const MobileTabBar: FC<MobileTabBarProps> = ({ isHidden }) => {
               <li key={tab.href} className="flex-1">
                 <Link
                   href={tab.href}
-                  className="flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground"
+                  className={cn(
+                    "flex cursor-pointer flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground",
+                    pressable,
+                  )}
                 >
                   <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm">
                     <tab.icon className="size-5" aria-hidden />
@@ -66,7 +86,8 @@ export const MobileTabBar: FC<MobileTabBarProps> = ({ isHidden }) => {
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition-colors",
+                  "flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium",
+                  pressable,
                   active
                     ? "text-foreground"
                     : "text-muted-foreground hover:text-foreground",

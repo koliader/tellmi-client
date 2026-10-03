@@ -211,17 +211,26 @@ export const PostForm: FC<PostFormProps> = ({ post }) => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {categories?.map((category) => (
-                        <SelectItem
-                          key={category.id}
-                          value={String(category.id)}
-                        >
-                          <CategoryBadge
-                            name={category.name}
-                            color={category.color}
-                          />
-                        </SelectItem>
-                      ))}
+                      {/*
+                        The reserved fallback is filtered out here. It is where the
+                        system files a post whose category was deleted, not a topic
+                        anybody chose, so offering it would produce posts that belong
+                        nowhere on purpose. Filtered on the flag rather than the name,
+                        so rewording it cannot silently put it back.
+                      */}
+                      {categories
+                        ?.filter((category) => !category.isFallback)
+                        .map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={String(category.id)}
+                          >
+                            <CategoryBadge
+                              name={category.name}
+                              color={category.color}
+                            />
+                          </SelectItem>
+                        ))}
                       {!isCategoriesPending && categories?.length === 0 && (
                         <SelectItem value="__empty" disabled>
                           No categories available
